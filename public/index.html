@@ -3,416 +3,833 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sakila 360 — Dashboard Analytique</title>
+<title>Sakila 360 — Intelligence Analytique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-  /* ===== RESET & BASE ===== */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg:       #f5f7fa;
-    --surface:  #ffffff;
-    --surface2: #f0f3f8;
-    --border:   #dde3ed;
-    --text1:    #111827;
-    --text2:    #4b5563;
-    --text3:    #9ca3af;
-    --blue:     #1a6fa8;
-    --blue-lt:  #dbeafe;
-    --blue-dk:  #1e40af;
-    --green:    #059669;
-    --green-lt: #d1fae5;
-    --red:      #dc2626;
-    --red-lt:   #fee2e2;
-    --amber:    #d97706;
-    --amber-lt: #fef3c7;
-    --gold:     #c9a84c;
-    --radius:   10px;
-    --radius-sm:6px;
-    --shadow:   0 1px 4px rgba(0,0,0,.08), 0 0 0 0.5px rgba(0,0,0,.06);
-  }
-  body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text1);
-    font-size: 14px;
-    line-height: 1.5;
-    min-height: 100vh;
-  }
+:root {
+  --void:     #f0ede8;
+  --deep:     #e8e4dd;
+  --surface:  #ffffff;
+  --lifted:   #f7f5f1;
+  --border:   rgba(60,50,40,.1);
+  --border2:  rgba(60,50,40,.18);
+  --text1:    #1e1a14;
+  --text2:    #6b6256;
+  --text3:    #a89f94;
+  --cyan:     #1a6fa8;
+  --cyan2:    #155d8e;
+  --gold:     #c47d0e;
+  --gold2:    #a86a0a;
+  --green:    #1e8a5e;
+  --red:      #c0392b;
+  --purple:   #6d4fb5;
+  --r:        12px;
+  --r-sm:     8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--void);
+  color:var(--text1);
+  min-height:100vh;
+  overflow-x:hidden;
+}
 
-  /* ===== HEADER ===== */
-  .header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 60px;
-    position: sticky; top: 0; z-index: 100;
-  }
-  .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text1); }
-  .logo span { color: var(--blue); }
-  .header-meta { display: flex; align-items: center; gap: 12px; }
-  .badge {
-    font-size: 11px; font-weight: 600; padding: 3px 10px;
-    border-radius: 20px; background: var(--blue-lt); color: var(--blue-dk);
-    letter-spacing: 0.3px;
-  }
-  .badge.green { background: var(--green-lt); color: var(--green); }
-  .header-meta p { font-size: 12px; color: var(--text3); }
+/* ── SUBTLE DOT PATTERN ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:radial-gradient(circle, rgba(60,50,40,.12) 1px, transparent 1px);
+  background-size:28px 28px;
+  pointer-events:none;z-index:0;opacity:1;
+}
 
-  /* ===== LAYOUT ===== */
-  .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem; }
+/* ── WARM GRADIENT WASH ── */
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 10%, rgba(196,125,14,.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 85% 90%, rgba(26,111,168,.06) 0%, transparent 60%);
+  pointer-events:none;z-index:0;
+}
 
-  /* ===== KPI GRID ===== */
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 1.5rem;
-  }
-  .kpi-card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 1.1rem 1.25rem;
-    border-left: 4px solid var(--blue);
-    display: flex; flex-direction: column; gap: 4px;
-  }
-  .kpi-card.green { border-left-color: var(--green); }
-  .kpi-card.red   { border-left-color: var(--red); }
-  .kpi-card.amber { border-left-color: var(--amber); }
-  .kpi-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
-  .kpi-value { font-size: 26px; font-weight: 700; color: var(--text1); line-height: 1.2; }
-  .kpi-delta { font-size: 11px; color: var(--text2); }
-  .kpi-delta.up   { color: var(--green); }
-  .kpi-delta.down { color: var(--red); }
+/* ── HEADER ── */
+.header{
+  position:sticky;top:0;z-index:200;
+  background:rgba(240,237,232,.88);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 2.5rem;
+  height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.logo{
+  font-family:'Syne',sans-serif;
+  font-size:22px;font-weight:800;
+  letter-spacing:-1px;
+  color:var(--text1);
+  display:flex;align-items:center;gap:10px;
+}
+.logo-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--cyan);
+  box-shadow:0 0 12px var(--cyan);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.logo em{color:var(--cyan);font-style:normal}
+.header-right{display:flex;align-items:center;gap:12px}
+.status-pill{
+  font-family:'DM Mono',monospace;
+  font-size:11px;font-weight:400;
+  padding:5px 12px;border-radius:20px;
+  border:1px solid rgba(0,230,118,.25);
+  color:var(--green);
+  background:rgba(0,230,118,.06);
+  display:flex;align-items:center;gap:6px;
+}
+.status-pill::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 8px var(--green);
+  animation:pulse 1.5s ease-in-out infinite;
+}
+.date-chip{
+  font-family:'DM Mono',monospace;
+  font-size:11px;color:var(--text3);
+  padding:5px 12px;border-radius:20px;
+  border:1px solid var(--border);
+}
 
-  /* ===== TABS ===== */
-  .tabs-wrapper {
-    background: var(--surface);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    margin-bottom: 1.5rem;
-  }
-  .tabs-bar {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-    padding: 0 1.25rem;
-    gap: 2px;
-  }
-  .tab-btn {
-    font-size: 13px; font-weight: 500;
-    padding: 12px 18px;
-    border: none; background: transparent;
-    color: var(--text2); cursor: pointer;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -1px;
-    transition: color .15s, border-color .15s;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .tab-btn:hover { color: var(--text1); }
-  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
-  .tab-icon { font-size: 15px; }
+/* ── HERO SECTION ── */
+.hero{
+  position:relative;z-index:1;
+  padding:3rem 2.5rem 2rem;
+  max-width:1400px;margin:0 auto;
+}
+.hero-label{
+  font-family:'DM Mono',monospace;
+  font-size:11px;font-weight:400;
+  color:var(--cyan);
+  letter-spacing:3px;
+  text-transform:uppercase;
+  margin-bottom:12px;
+  opacity:0;animation:fadeUp .6s .1s forwards;
+}
+.hero-title{
+  font-family:'Syne',sans-serif;
+  font-size:clamp(32px,4vw,56px);
+  font-weight:800;line-height:1.05;
+  letter-spacing:-2px;
+  color:var(--text1);
+  margin-bottom:8px;
+  opacity:0;animation:fadeUp .6s .2s forwards;
+}
+.hero-title span{
+  color:transparent;
+  -webkit-text-stroke:1px var(--cyan);
+}
+.hero-sub{
+  font-size:14px;color:var(--text2);font-weight:300;
+  opacity:0;animation:fadeUp .6s .3s forwards;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 
-  /* ===== PANELS ===== */
-  .panel { display: none; padding: 1.5rem; }
-  .panel.active { display: block; }
+/* ── MAIN LAYOUT ── */
+.main{
+  position:relative;z-index:1;
+  max-width:1400px;margin:0 auto;
+  padding:0 2.5rem 3rem;
+}
 
-  /* ===== CARDS ===== */
-  .card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 1.25rem;
-  }
-  .card-title {
-    font-size: 13px; font-weight: 600; color: var(--text1);
-    margin-bottom: 1rem;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .card-title .dot {
-    width: 8px; height: 8px; border-radius: 50%; background: var(--blue);
-  }
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
-  .one-col { margin-bottom: 1.25rem; }
+/* ── KPI GRID ── */
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-bottom:1.75rem;
+}
+.kpi{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:1.4rem 1.5rem;
+  position:relative;overflow:hidden;
+  opacity:0;animation:fadeUp .5s forwards;
+  transition:border-color .2s, transform .2s;
+  cursor:default;
+}
+.kpi:hover{border-color:var(--border2);transform:translateY(-2px)}
+.kpi:nth-child(1){animation-delay:.1s}
+.kpi:nth-child(2){animation-delay:.15s}
+.kpi:nth-child(3){animation-delay:.2s}
+.kpi:nth-child(4){animation-delay:.25s}
+.kpi::before{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.03) 0%,transparent 60%);
+  pointer-events:none;
+}
+.kpi-accent{
+  position:absolute;top:0;left:0;
+  width:3px;height:100%;
+  border-radius:4px 0 0 4px;
+}
+.kpi.c-cyan .kpi-accent{background:var(--cyan)}
+.kpi.c-green .kpi-accent{background:var(--green)}
+.kpi.c-red .kpi-accent{background:var(--red)}
+.kpi.c-gold .kpi-accent{background:var(--gold)}
+.kpi-icon{
+  font-size:20px;margin-bottom:10px;
+  display:block;
+  filter:grayscale(0);
+}
+.kpi-label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;font-weight:400;
+  color:var(--text3);
+  letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:6px;
+}
+.kpi-value{
+  font-family:'Syne',sans-serif;
+  font-size:28px;font-weight:700;
+  color:var(--text1);line-height:1;
+  margin-bottom:6px;
+  letter-spacing:-1px;
+}
+.kpi.c-cyan .kpi-value{color:var(--cyan)}
+.kpi.c-green .kpi-value{color:var(--green)}
+.kpi.c-red .kpi-value{color:var(--red)}
+.kpi.c-gold .kpi-value{color:var(--gold)}
+.kpi-delta{
+  font-size:11px;color:var(--text2);
+  display:flex;align-items:center;gap:4px;
+}
+.kpi-delta.up{color:var(--green)}
+.kpi-delta.dn{color:var(--red)}
 
-  /* ===== LEGEND ===== */
-  .legend {
-    display: flex; flex-wrap: wrap; gap: 8px;
-    margin-bottom: 12px;
-  }
-  .legend-item {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 11px; color: var(--text2);
-  }
-  .legend-dot {
-    width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0;
-  }
+/* ── TABS ── */
+.nav-tabs{
+  display:flex;gap:4px;
+  margin-bottom:1.5rem;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:6px;
+  opacity:0;animation:fadeUp .5s .35s forwards;
+  box-shadow:0 1px 4px rgba(60,50,40,.06);
+}
+.tab-btn{
+  flex:1;
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:500;
+  padding:10px 16px;
+  border:none;background:transparent;
+  color:var(--text3);
+  border-radius:var(--r-sm);
+  cursor:pointer;
+  transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  white-space:nowrap;
+}
+.tab-btn:hover{color:var(--text2);background:var(--lifted)}
+.tab-btn.active{
+  background:var(--lifted);
+  color:var(--text1);
+  border:1px solid var(--border2);
+  box-shadow:0 1px 3px rgba(60,50,40,.08);
+}
+.tab-btn.active .tab-ico{color:var(--cyan)}
+.tab-ico{font-size:14px;transition:color .2s}
 
-  /* ===== FILTER BAR ===== */
-  .filter-bar {
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 1.25rem;
-    padding: 0.75rem 1rem;
-    background: var(--surface2);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-  }
-  .filter-bar label { font-size: 12px; font-weight: 600; color: var(--text2); }
-  .filter-bar select {
-    font-size: 12px; padding: 5px 10px;
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    background: var(--surface); color: var(--text1); cursor: pointer;
-  }
+/* ── PANELS ── */
+.panel{display:none}
+.panel.active{
+  display:grid;
+  gap:14px;
+  animation:panelIn .3s ease;
+}
+@keyframes panelIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-  /* ===== RANK TABLE ===== */
-  .rank-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .rank-table th {
-    text-align: left; padding: 8px 10px;
-    border-bottom: 2px solid var(--border);
-    color: var(--text3); font-weight: 600;
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
-  }
-  .rank-table td {
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--border);
-    color: var(--text1); vertical-align: middle;
-  }
-  .rank-table tr:last-child td { border-bottom: none; }
-  .rank-table tr:hover td { background: var(--surface2); }
-  .rank-num {
-    width: 24px; height: 24px; border-radius: 50%;
-    background: var(--blue-lt); color: var(--blue-dk);
-    font-weight: 700; font-size: 11px;
-    display: inline-flex; align-items: center; justify-content: center;
-  }
-  .rank-num.top1 { background: #fef9c3; color: #92400e; }
-  .badge-cat {
-    font-size: 10px; padding: 2px 8px; border-radius: 20px;
-    background: var(--surface2); color: var(--text2);
-    border: 1px solid var(--border);
-  }
+/* ── CARDS ── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:1.5rem;
+  position:relative;overflow:hidden;
+  transition:border-color .2s, box-shadow .2s;
+  box-shadow:0 1px 4px rgba(60,50,40,.06);
+}
+.card:hover{border-color:var(--border2);box-shadow:0 3px 12px rgba(60,50,40,.1)}
+.card::after{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.6) 0%,transparent 50%);
+  pointer-events:none;
+}
+.card-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:1.25rem;
+}
+.card-title{
+  font-family:'Syne',sans-serif;
+  font-size:14px;font-weight:600;
+  color:var(--text1);
+  display:flex;align-items:center;gap:8px;
+}
+.card-title .ct-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--cyan);flex-shrink:0;
+}
+.card-subtitle{
+  font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--text3);
+  margin-top:2px;letter-spacing:.5px;
+}
+.card-badge{
+  font-family:'DM Mono',monospace;
+  font-size:10px;padding:3px 8px;
+  border-radius:4px;
+  border:1px solid var(--border);
+  color:var(--text3);
+}
 
-  /* ===== HEATMAP ===== */
-  .heatmap-wrap { overflow-x: auto; }
-  .heatmap-table { border-collapse: separate; border-spacing: 3px; }
-  .heatmap-table th {
-    font-size: 11px; font-weight: 600; color: var(--text2);
-    padding: 4px 10px; text-align: center; white-space: nowrap;
-  }
-  .heatmap-table th.row-header { text-align: left; min-width: 90px; }
-  .hm-cell {
-    width: 90px; height: 38px;
-    border-radius: 6px;
-    text-align: center; font-size: 12px; font-weight: 700;
-    cursor: default; transition: transform .15s;
-    padding: 0 4px;
-  }
-  .hm-cell:hover { transform: scale(1.06); z-index: 1; position: relative; }
+/* ── GRID LAYOUTS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.g-full{grid-column:1/-1}
 
-  /* ===== STORE CARDS ===== */
-  .store-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.25rem; }
-  .store-card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 1.1rem 1.25rem;
-    border-top: 3px solid var(--blue);
-  }
-  .store-name { font-size: 13px; font-weight: 700; color: var(--text1); margin-bottom: 4px; }
-  .store-sub  { font-size: 11px; color: var(--text3); margin-bottom: 12px; }
-  .store-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stat-item { }
-  .stat-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.4px; }
-  .stat-val { font-size: 16px; font-weight: 700; color: var(--text1); }
-  .stat-val.danger { color: var(--red); }
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.leg{
+  display:flex;align-items:center;gap:6px;
+  font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--text2);letter-spacing:.3px;
+}
+.leg-sq{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 
-  /* ===== PROGRESS BAR ===== */
-  .prog-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .prog-label { font-size: 12px; color: var(--text2); width: 80px; flex-shrink: 0; }
-  .prog-bar { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
-  .prog-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
-  .prog-val { font-size: 11px; color: var(--text2); width: 50px; text-align: right; flex-shrink: 0; }
+/* ── FILTER ── */
+.filter-row{
+  display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;
+}
+.filter-row label{
+  font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--text3);
+  letter-spacing:1px;text-transform:uppercase;
+}
+.styled-select{
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  padding:6px 12px;
+  background:var(--lifted);
+  border:1px solid var(--border);
+  border-radius:var(--r-sm);
+  color:var(--text1);
+  cursor:pointer;
+  appearance:none;
+  -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23445577'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  padding-right:28px;
+  transition:border-color .15s;
+}
+.styled-select:focus{outline:none;border-color:var(--cyan)}
+.styled-select:hover{border-color:var(--border2)}
 
-  /* ===== FOOTER ===== */
-  .footer {
-    text-align: center; padding: 1.5rem;
-    font-size: 11px; color: var(--text3);
-    border-top: 1px solid var(--border); margin-top: 1rem;
-  }
+/* ── RANK TABLE ── */
+.rank-tbl{width:100%;border-collapse:collapse}
+.rank-tbl th{
+  font-family:'DM Mono',monospace;
+  font-size:9px;font-weight:400;
+  color:var(--text3);
+  letter-spacing:1.5px;text-transform:uppercase;
+  padding:8px 10px;
+  border-bottom:1px solid var(--border);
+  text-align:left;
+}
+.rank-tbl td{
+  padding:10px 10px;
+  border-bottom:1px solid rgba(60,50,40,.06);
+  font-size:12px;color:var(--text2);
+  vertical-align:middle;
+}
+.rank-tbl tr:last-child td{border-bottom:none}
+.rank-tbl tr:hover td{background:var(--lifted)}
+.rank-num{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--lifted);
+  border:1px solid var(--border);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;
+  font-size:10px;font-weight:500;color:var(--text2);
+}
+.rank-num.gold{background:rgba(196,125,14,.1);border-color:rgba(196,125,14,.3);color:var(--gold)}
+.film-name{font-weight:500;color:var(--text1);font-size:12px}
+.cat-pill{
+  font-family:'DM Mono',monospace;
+  font-size:9px;padding:2px 7px;border-radius:3px;
+  border:1px solid var(--border);
+  color:var(--text3);letter-spacing:.5px;
+}
+.fee-val{
+  font-family:'DM Mono',monospace;
+  font-weight:500;color:var(--red);font-size:12px;
+}
+.delay-val{
+  font-family:'DM Mono',monospace;
+  font-size:11px;color:var(--text3);
+}
 
-  /* ===== RESPONSIVE ===== */
-  @media (max-width: 900px) {
-    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-    .two-col, .store-grid { grid-template-columns: 1fr; }
-    .container { padding: 1rem; }
-    .header { padding: 0 1rem; }
-    .tabs-bar { overflow-x: auto; }
-  }
-  @media (max-width: 540px) {
-    .kpi-grid { grid-template-columns: 1fr 1fr; }
-    .kpi-value { font-size: 20px; }
-  }
+/* ── PROGRESS BARS ── */
+.prog-list{display:flex;flex-direction:column;gap:10px}
+.prog-row{display:flex;align-items:center;gap:10px}
+.prog-cat{
+  font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--text2);
+  width:70px;flex-shrink:0;letter-spacing:.3px;
+}
+.prog-track{
+  flex:1;height:5px;
+  background:rgba(60,50,40,.08);
+  border-radius:3px;overflow:hidden;
+}
+.prog-fill{
+  height:100%;border-radius:3px;
+  transition:width .8s cubic-bezier(.16,1,.3,1);
+}
+.prog-pct{
+  font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--text3);
+  width:36px;text-align:right;flex-shrink:0;
+}
+
+/* ── HEATMAP ── */
+.hm-container{overflow-x:auto}
+.hm-table{border-collapse:separate;border-spacing:3px;width:100%}
+.hm-table th{
+  font-family:'DM Mono',monospace;
+  font-size:9px;font-weight:400;
+  color:var(--text3);letter-spacing:1px;
+  text-align:center;padding:4px 6px;
+  white-space:nowrap;
+}
+.hm-table th.rh{text-align:left;color:var(--text2)}
+.hm-cell{
+  height:36px;border-radius:5px;
+  text-align:center;
+  font-family:'DM Mono',monospace;
+  font-size:10px;font-weight:500;
+  cursor:default;
+  transition:transform .15s, filter .15s;
+  position:relative;
+}
+.hm-cell:hover{transform:scale(1.08);filter:brightness(1.2);z-index:2;position:relative}
+
+/* ── STORE CARDS ── */
+.store-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.store-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:1.25rem;
+  position:relative;overflow:hidden;
+  box-shadow:0 1px 4px rgba(60,50,40,.06);
+}
+.store-card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+}
+.store-name{
+  font-family:'Syne',sans-serif;
+  font-size:13px;font-weight:700;
+  color:var(--text1);margin-bottom:3px;
+}
+.store-mgr{
+  font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--text3);
+  margin-bottom:14px;letter-spacing:.3px;
+}
+.store-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.s-stat-label{
+  font-family:'DM Mono',monospace;
+  font-size:9px;color:var(--text3);
+  text-transform:uppercase;letter-spacing:1px;
+  margin-bottom:2px;
+}
+.s-stat-val{
+  font-family:'Syne',sans-serif;
+  font-size:18px;font-weight:700;color:var(--text1);
+}
+.s-stat-val.danger{color:var(--red)}
+
+/* ── DONUT LEGEND ── */
+.donut-legend{
+  display:flex;flex-direction:column;gap:8px;
+  padding-left:1rem;
+}
+.dl-row{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;
+}
+.dl-sq{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.dl-name{color:var(--text2);flex:1;font-size:11px}
+.dl-pct{
+  font-family:'DM Mono',monospace;
+  font-size:11px;font-weight:500;color:var(--text1);
+}
+
+/* ── OCCUPATION METER ── */
+.occ-meter{
+  display:flex;align-items:center;gap:20px;
+  padding:1.5rem;
+  background:var(--surface);
+  border-radius:var(--r);
+  border:1px solid var(--border);
+  margin-bottom:14px;
+  box-shadow:0 1px 4px rgba(60,50,40,.06);
+}
+.occ-ring{position:relative;width:90px;height:90px;flex-shrink:0}
+.occ-ring canvas{width:90px!important;height:90px!important}
+.occ-center{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.occ-pct{
+  font-family:'Syne',sans-serif;
+  font-size:18px;font-weight:800;color:var(--green);
+}
+.occ-lbl{font-family:'DM Mono',monospace;font-size:8px;color:var(--text3)}
+.occ-info{flex:1}
+.occ-title{
+  font-family:'Syne',sans-serif;
+  font-size:15px;font-weight:700;color:var(--text1);margin-bottom:4px;
+}
+.occ-desc{font-size:12px;color:var(--text2);line-height:1.6}
+.occ-stat{
+  display:flex;gap:20px;margin-top:12px;
+}
+.os-item{text-align:center}
+.os-v{
+  font-family:'Syne',sans-serif;
+  font-size:22px;font-weight:700;
+}
+.os-v.green{color:var(--green)}
+.os-v.red{color:var(--red)}
+.os-l{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.5px}
+
+/* ── FOOTER ── */
+.footer{
+  position:relative;z-index:1;
+  text-align:center;
+  padding:2rem;
+  border-top:1px solid var(--border);
+  font-family:'DM Mono',monospace;
+  font-size:10px;color:var(--text3);
+  letter-spacing:1px;
+  text-transform:uppercase;
+  background:var(--deep);
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1000px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .g2,.g3,.store-grid{grid-template-columns:1fr}
+  .main,.hero{padding-left:1.25rem;padding-right:1.25rem}
+  .header{padding:0 1.25rem}
+  .nav-tabs{overflow-x:auto}
+  .tab-btn{flex:0 0 auto;padding:9px 14px}
+}
+@media(max-width:540px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .kpi-value{font-size:22px}
+  .hero-title{font-size:28px}
+}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="header">
-  <div class="logo">Sakila <span>360</span></div>
-  <div class="header-meta">
-    <span class="badge green">● Live DWH</span>
-    <span class="badge">2005 · Période analysée</span>
-    <p>Base : sakila_dwh</p>
+  <div class="logo">
+    <span class="logo-dot"></span>
+    Sakila<em>360</em>
+  </div>
+  <div class="header-right">
+    <span class="status-pill">DWH connecté</span>
+    <span class="date-chip">2005 · Période fiscale</span>
   </div>
 </header>
 
-<main class="container">
+<section class="hero">
+  <p class="hero-label">Intelligence Analytique · sakila_dwh</p>
+  <h1 class="hero-title">Performance<br><span>Locations</span></h1>
+  <p class="hero-sub">Vue décisionnelle — Rentabilité films · Comportement client · Inventaire</p>
+</section>
 
-  <!-- KPI CARDS -->
+<main class="main">
+
+  <!-- KPI -->
   <div class="kpi-grid">
-    <div class="kpi-card">
-      <div class="kpi-label">💰 Chiffre d'affaires</div>
+    <div class="kpi c-cyan">
+      <div class="kpi-accent"></div>
+      <span class="kpi-icon">💰</span>
+      <div class="kpi-label">Chiffre d'affaires</div>
       <div class="kpi-value">$67 416</div>
-      <div class="kpi-delta up">▲ +18 % vs période préc.</div>
+      <div class="kpi-delta up">▲ +18 % période préc.</div>
     </div>
-    <div class="kpi-card green">
-      <div class="kpi-label">🎬 Locations totales</div>
+    <div class="kpi c-green">
+      <div class="kpi-accent"></div>
+      <span class="kpi-icon">🎬</span>
+      <div class="kpi-label">Locations totales</div>
       <div class="kpi-value">16 049</div>
       <div class="kpi-delta up">▲ +12 % en 2005</div>
     </div>
-    <div class="kpi-card red">
-      <div class="kpi-label">⚠️ Pénalités de retard</div>
+    <div class="kpi c-red">
+      <div class="kpi-accent"></div>
+      <span class="kpi-icon">⚠️</span>
+      <div class="kpi-label">Pénalités retard</div>
       <div class="kpi-value">$8 132</div>
-      <div class="kpi-delta down">12,1 % du CA total</div>
+      <div class="kpi-delta dn">12,1 % du CA total</div>
     </div>
-    <div class="kpi-card amber">
-      <div class="kpi-label">📦 Taux d'occupation</div>
-      <div class="kpi-value">78,5 %</div>
+    <div class="kpi c-gold">
+      <div class="kpi-accent"></div>
+      <span class="kpi-icon">📦</span>
+      <div class="kpi-label">Taux occupation</div>
+      <div class="kpi-value">78,5%</div>
       <div class="kpi-delta">215 films dormants</div>
     </div>
   </div>
 
   <!-- TABS -->
-  <div class="tabs-wrapper">
-    <div class="tabs-bar">
-      <button class="tab-btn active" onclick="showTab('t1',this)">
-        <span class="tab-icon"></span> CA mensuel par catégorie
-      </button>
-      <button class="tab-btn" onclick="showTab('t2',this)">
-        <span class="tab-icon"> </span> Top pénalités par film
-      </button>
-      <button class="tab-btn" onclick="showTab('t3',this)">
-        <span class="tab-icon"> </span> Profil client × pays
-      </button>
-      <button class="tab-btn" onclick="showTab('t4',this)">
-        <span class="tab-icon"></span> Occupation inventaire
-      </button>
-    </div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="showTab('t1',this)">
+      <span class="tab-ico">↗</span> CA mensuel
+    </button>
+    <button class="tab-btn" onclick="showTab('t2',this)">
+      <span class="tab-ico">⚡</span> Top pénalités
+    </button>
+    <button class="tab-btn" onclick="showTab('t3',this)">
+      <span class="tab-ico">◎</span> Profil client
+    </button>
+    <button class="tab-btn" onclick="showTab('t4',this)">
+      <span class="tab-ico">▣</span> Inventaire
+    </button>
+  </div>
 
-    <!-- PANEL 1 : CA mensuel -->
-    <div id="t1" class="panel active">
-      <div class="one-col card">
-        <div class="card-title"><span class="dot"></span>Évolution mensuelle du CA par catégorie de film (2005)</div>
-        <div class="legend" id="leg1"></div>
-        <div style="position:relative;width:100%;height:320px">
-          <canvas id="c1" role="img" aria-label="Courbes du chiffre d'affaires mensuel par catégorie 2005">CA mensuel par catégorie de film.</canvas>
+  <!-- P1: CA mensuel -->
+  <div id="t1" class="panel active" style="grid-template-columns:1fr">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><span class="ct-dot"></span>Évolution mensuelle du CA par catégorie</div>
+          <div class="card-subtitle">MAI → SEPT 2005 · 5 MOIS · 9 CATÉGORIES</div>
         </div>
+        <span class="card-badge">OLAP Q1</span>
       </div>
-      <div class="one-col card">
-        <div class="card-title"><span class="dot" style="background:var(--amber)"></span>Cumul CA par catégorie (mai–sept. 2005)</div>
-        <div style="position:relative;width:100%;height:240px">
-          <canvas id="c1b" role="img" aria-label="Barres du CA cumulé par catégorie 2005">CA cumulé par catégorie.</canvas>
-        </div>
+      <div class="legend" id="leg1"></div>
+      <div style="position:relative;width:100%;height:300px">
+        <canvas id="c1" role="img" aria-label="CA mensuel par catégorie 2005">Courbes CA mensuel par catégorie.</canvas>
       </div>
     </div>
-
-    <!-- PANEL 2 : Top pénalités -->
-    <div id="t2" class="panel">
-      <div class="filter-bar">
-        <label>🏪 Filtrer par magasin :</label>
-        <select id="storeFilter" onchange="renderTop5()">
-          <option value="1">Magasin 1 — Lethbridge (CA)</option>
-          <option value="2">Magasin 2 — Woodridge (AU)</option>
-        </select>
-      </div>
-      <div class="two-col">
-        <div class="card">
-          <div class="card-title"><span class="dot" style="background:var(--red)"></span>Top 5 films — pénalités ($)</div>
-          <div style="position:relative;width:100%;height:260px">
-            <canvas id="c2" role="img" aria-label="Top 5 films avec le plus de pénalités">Top films par pénalités.</canvas>
+    <div class="g2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title"><span class="ct-dot" style="background:var(--gold)"></span>CA cumulé par catégorie</div>
+            <div class="card-subtitle">TOTAL MAI–SEPT 2005</div>
           </div>
         </div>
-        <div class="card">
-          <div class="card-title"><span class="dot"></span>Classement détaillé</div>
-          <table class="rank-table" id="rankTable"></table>
+        <div style="position:relative;height:220px">
+          <canvas id="c1b" role="img" aria-label="CA cumulé par catégorie">CA cumulé.</canvas>
         </div>
       </div>
-    </div>
-
-    <!-- PANEL 3 : Pays × genre -->
-    <div id="t3" class="panel">
-      <div class="two-col">
-        <div class="card">
-          <div class="card-title"><span class="dot"></span>Répartition des locations par catégorie</div>
-          <div style="position:relative;height:260px">
-            <canvas id="c3" role="img" aria-label="Donut des locations par catégorie">Répartition par catégorie.</canvas>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title"><span class="ct-dot" style="background:var(--purple)"></span>CA par magasin · mensuel</div>
+            <div class="card-subtitle">STORE 1 VS STORE 2</div>
           </div>
-          <div id="donutLegend" style="margin-top:12px"></div>
         </div>
-        <div class="card">
-          <div class="card-title"><span class="dot" style="background:var(--green)"></span>Top catégories — part de marché (%)</div>
-          <div id="progBars" style="margin-top:8px"></div>
-        </div>
-      </div>
-      <div class="one-col card">
-        <div class="card-title"><span class="dot" style="background:var(--amber)"></span>Heatmap : genre préféré par pays (%)</div>
-        <p style="font-size:11px;color:var(--text3);margin-bottom:12px">Pourcentage des locations du pays consacrées à chaque catégorie. Les cases surlignées = genre #1 pour ce pays.</p>
-        <div class="heatmap-wrap">
-          <table class="heatmap-table" id="heatmapTable"></table>
+        <div style="position:relative;height:220px">
+          <canvas id="c1c" role="img" aria-label="CA mensuel par magasin">CA par magasin.</canvas>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- PANEL 4 : Inventaire -->
-    <div id="t4" class="panel">
-      <div class="two-col">
-        <div class="card">
-          <div class="card-title"><span class="dot" style="background:var(--green)"></span>Taux d'occupation de l'inventaire</div>
-          <div style="position:relative;height:240px">
-            <canvas id="c4" role="img" aria-label="Donut du taux d'occupation inventaire">785 films loués, 215 dormants sur 1000 total.</canvas>
+  <!-- P2: Top pénalités -->
+  <div id="t2" class="panel" style="grid-template-columns:1fr">
+    <div class="filter-row">
+      <label>Magasin :</label>
+      <select class="styled-select" id="storeFilter" onchange="renderTop5()">
+        <option value="1">Magasin 1 — Lethbridge, Canada</option>
+        <option value="2">Magasin 2 — Woodridge, Australie</option>
+      </select>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title"><span class="ct-dot" style="background:var(--red)"></span>Top 5 films · pénalités ($)</div>
+            <div class="card-subtitle">CLASSÉ PAR MONTANT TOTAL RETARDS</div>
           </div>
+          <span class="card-badge">OLAP Q2</span>
         </div>
-        <div class="card">
-          <div class="card-title"><span class="dot" style="background:var(--red)"></span>Films dormants par catégorie</div>
-          <div style="position:relative;height:240px">
-            <canvas id="c5" role="img" aria-label="Barres des films jamais loués par catégorie">Films dormants par catégorie.</canvas>
+        <div style="position:relative;height:240px">
+          <canvas id="c2" role="img" aria-label="Top 5 films pénalités">Top 5 films.</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="ct-dot"></span>Classement détaillé</div>
+        </div>
+        <table class="rank-tbl" id="rankTable"></table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><span class="ct-dot" style="background:var(--gold)"></span>Distribution des retards · toutes catégories</div>
+          <div class="card-subtitle">PÉNALITÉS TOTALES PAR GENRE DE FILM</div>
+        </div>
+      </div>
+      <div style="position:relative;height:180px">
+        <canvas id="c2b" role="img" aria-label="Pénalités par catégorie">Pénalités par genre.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- P3: Profil client -->
+  <div id="t3" class="panel" style="grid-template-columns:1fr">
+    <div class="g2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title"><span class="ct-dot"></span>Locations par catégorie</div>
+            <div class="card-subtitle">RÉPARTITION GLOBALE · 16 049 TRANSACTIONS</div>
+          </div>
+          <span class="card-badge">OLAP Q3</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;height:220px">
+          <div style="position:relative;height:200px;width:200px;flex-shrink:0">
+            <canvas id="c3" role="img" aria-label="Donut catégories">Répartition catégories.</canvas>
+          </div>
+          <div class="donut-legend" id="donutLeg"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="ct-dot" style="background:var(--green)"></span>Part de marché par catégorie</div>
+          <div class="card-subtitle">% DES LOCATIONS TOTALES</div>
+        </div>
+        <div class="prog-list" id="progBars" style="margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><span class="ct-dot" style="background:var(--gold)"></span>Heatmap · Préférence genre par pays</div>
+          <div class="card-subtitle">% DES LOCATIONS DU PAYS · CASE DORÉE = GENRE #1</div>
+        </div>
+      </div>
+      <div class="hm-container">
+        <table class="hm-table" id="hmTable"></table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="ct-dot" style="background:var(--purple)"></span>Segmentation client</div>
+        <div class="card-subtitle">PAR NOMBRE DE LOCATIONS HISTORIQUES</div>
+      </div>
+      <div style="position:relative;height:180px">
+        <canvas id="c3b" role="img" aria-label="Segmentation clients">Segments clients.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- P4: Inventaire -->
+  <div id="t4" class="panel" style="grid-template-columns:1fr">
+    <div class="occ-meter">
+      <div class="occ-ring">
+        <canvas id="c4mini" role="img" aria-label="Taux occupation mini">78.5%</canvas>
+        <div class="occ-center">
+          <div class="occ-pct">78,5%</div>
+          <div class="occ-lbl">ACTIFS</div>
+        </div>
+      </div>
+      <div class="occ-info">
+        <div class="occ-title">Taux d'occupation de l'inventaire</div>
+        <div class="occ-desc">21,5 % des films n'ont jamais été loués au dernier trimestre. Les films dormants sont concentrés sur 3 catégories : Travel (38 %), Music (29 %) et Horror (22 %).</div>
+        <div class="occ-stat">
+          <div class="os-item"><div class="os-v green">785</div><div class="os-l">Loués</div></div>
+          <div class="os-item"><div class="os-v red">215</div><div class="os-l">Dormants</div></div>
+          <div class="os-item"><div class="os-v" style="color:var(--cyan)">1 000</div><div class="os-l">Total</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title"><span class="ct-dot" style="background:var(--red)"></span>Films dormants par catégorie</div>
+            <div class="card-subtitle">OLAP Q4 · DERNIER TRIMESTRE</div>
+          </div>
+          <span class="card-badge">OLAP Q4</span>
+        </div>
+        <div style="position:relative;height:220px">
+          <canvas id="c5" role="img" aria-label="Films dormants catégorie">Films dormants.</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="ct-dot" style="background:var(--gold)"></span>Recommandations stratégiques</div>
+          <div class="card-subtitle">ACTIONS PRIORITAIRES</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+          <div style="padding:12px;background:rgba(30,138,94,.06);border:1px solid rgba(30,138,94,.2);border-radius:8px">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--green);letter-spacing:1px;margin-bottom:4px">ACTION 1</div>
+            <div style="font-size:12px;color:var(--text1);font-weight:500">Étendre durée Drama/Comedy +1 jour</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">Réduction estimée des retards : −30 %</div>
+          </div>
+          <div style="padding:12px;background:rgba(26,111,168,.05);border:1px solid rgba(26,111,168,.18);border-radius:8px">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--cyan);letter-spacing:1px;margin-bottom:4px">ACTION 2</div>
+            <div style="font-size:12px;color:var(--text1);font-weight:500">Déstockage Travel / Music</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">102 films dormants → −15 % coûts stock</div>
+          </div>
+          <div style="padding:12px;background:rgba(196,125,14,.05);border:1px solid rgba(196,125,14,.2);border-radius:8px">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);letter-spacing:1px;margin-bottom:4px">ACTION 3</div>
+            <div style="font-size:12px;color:var(--text1);font-weight:500">Campagne pays × genre personnalisée</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">Japon Sci-Fi 17,3 % → cibler recommandations</div>
           </div>
         </div>
       </div>
-      <div class="store-grid">
-        <div class="store-card">
-          <div class="store-name"> Magasin 1 — Lethbridge, Canada</div>
-          <div class="store-sub">Manager : Mike Hillyer · Store ID : 1</div>
-          <div class="store-stats">
-            <div class="stat-item"><div class="stat-lbl">Locations</div><div class="stat-val">7 918</div></div>
-            <div class="stat-item"><div class="stat-lbl">CA</div><div class="stat-val">$33 490</div></div>
-            <div class="stat-item"><div class="stat-lbl">Pénalités</div><div class="stat-val danger">$4 021</div></div>
-            <div class="stat-item"><div class="stat-lbl">Films actifs</div><div class="stat-val">392</div></div>
-          </div>
+    </div>
+    <div class="store-grid">
+      <div class="store-card">
+        <div class="store-name">🏪 Magasin 1 — Lethbridge, Canada</div>
+        <div class="store-mgr">MANAGER : MIKE HILLYER · STORE ID : 01</div>
+        <div class="store-stats">
+          <div><div class="s-stat-label">Locations</div><div class="s-stat-val">7 918</div></div>
+          <div><div class="s-stat-label">CA</div><div class="s-stat-val">$33 490</div></div>
+          <div><div class="s-stat-label">Pénalités</div><div class="s-stat-val danger">$4 021</div></div>
+          <div><div class="s-stat-label">Films actifs</div><div class="s-stat-val">392</div></div>
         </div>
-        <div class="store-card">
-          <div class="store-name"> Magasin 2 — Woodridge, Australie</div>
-          <div class="store-sub">Manager : Jon Stephens · Store ID : 2</div>
-          <div class="store-stats">
-            <div class="stat-item"><div class="stat-lbl">Locations</div><div class="stat-val">8 131</div></div>
-            <div class="stat-item"><div class="stat-lbl">CA</div><div class="stat-val">$33 926</div></div>
-            <div class="stat-item"><div class="stat-lbl">Pénalités</div><div class="stat-val danger">$4 111</div></div>
-            <div class="stat-item"><div class="stat-lbl">Films actifs</div><div class="stat-val">398</div></div>
-          </div>
+      </div>
+      <div class="store-card">
+        <div class="store-name">🏪 Magasin 2 — Woodridge, Australie</div>
+        <div class="store-mgr">MANAGER : JON STEPHENS · STORE ID : 02</div>
+        <div class="store-stats">
+          <div><div class="s-stat-label">Locations</div><div class="s-stat-val">8 131</div></div>
+          <div><div class="s-stat-label">CA</div><div class="s-stat-val">$33 926</div></div>
+          <div><div class="s-stat-label">Pénalités</div><div class="s-stat-val danger">$4 111</div></div>
+          <div><div class="s-stat-label">Films actifs</div><div class="s-stat-val">398</div></div>
         </div>
       </div>
     </div>
@@ -421,16 +838,23 @@
 </main>
 
 <footer class="footer">
-  Sakila 360 — Data Warehouse · MySQL 8.0 · Chart.js 4.4 · © 2024  ASSA · ALATSA · AZONFACK
+  Sakila 360 · Data Warehouse · MySQL 8.0 · Chart.js 4.4 · Données 2005
 </footer>
 
 <script>
-/* =========================================================
-   DONNÉES (à remplacer par appels API/PHP si connexion BDD)
-   ========================================================= */
-const MONTHS  = ['Mai','Juin','Juil.','Août','Sept.'];
-const CATS    = ['Sports','Sci-Fi','Animation','Action','Comedy','Drama','Family','Horror','Music'];
-const COLORS  = ['#1a6fa8','#e05c2a','#2a9d6f','#8b5cf6','#d97706','#dc2626','#0891b2','#be185d','#6b7280'];
+/* ── DATA ── */
+const MONTHS = ['Mai','Juin','Juil.','Août','Sept.'];
+const CATS   = ['Sports','Sci-Fi','Animation','Action','Comedy','Drama','Family','Horror','Music'];
+const COLS   = ['#1a6fa8','#c47d0e','#1e8a5e','#6d4fb5','#c0392b','#0891b2','#b45309','#7c3aed','#0f766e'];
+
+const TOOLTIP = {
+  backgroundColor:'#ffffff',
+  borderColor:'rgba(60,50,40,.15)',
+  borderWidth:1,
+  titleColor:'#1e1a14',
+  bodyColor:'#6b6256',
+  padding:10
+};
 
 const caData = {
   Sports:    [3210,4892,5103,3820,2180],
@@ -460,9 +884,10 @@ const top5Data = {
     {title:'CABIN FLASH',      cat:'Action',      fee:61.50, nb:18, retard:3.8}
   ]
 };
-
 const catTotals = [4200,3980,3820,3540,3280,3100,2800,2540,2310];
 const totalLoc  = catTotals.reduce((a,b)=>a+b,0);
+
+const penCats = [520,480,440,410,380,360,330,310,290];
 
 const hmData = [
   {pays:'India',   vals:[2.1, 14.8, 3.4,  8.2,  5.0]},
@@ -476,233 +901,281 @@ const hmData = [
 ];
 const hmCats = ['Sci-Fi','Drama','Animation','Comedy','Sports'];
 
-/* =========================================================
-   ONGLETS
-   ========================================================= */
-function showTab(id, btn) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+const segData = {
+  labels:['Fidèle (≥30)','Régulier (10–29)','Occasionnel (1–9)','Inactif (0)'],
+  data:[72,198,265,64],
+  cols:['#00e5ff','#00e676','#b388ff','#445577']
+};
+
+/* ── CHART DEFAULTS ── */
+Chart.defaults.color = '#a89f94';
+Chart.defaults.borderColor = 'rgba(60,50,40,.08)';
+Chart.defaults.font.family = "'DM Mono', monospace";
+
+/* ── TABS ── */
+function showTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
 }
 
-/* =========================================================
-   PANEL 1 — Courbes CA mensuel
-   ========================================================= */
-const legEl = document.getElementById('leg1');
-CATS.forEach((c,i) => {
-  const span = document.createElement('span');
-  span.className = 'legend-item';
-  span.innerHTML = `<span class="legend-dot" style="background:${COLORS[i]}"></span>${c}`;
-  legEl.appendChild(span);
+/* ── P1 : LEGEND ── */
+CATS.forEach((c,i)=>{
+  const s=document.createElement('span');
+  s.className='leg';
+  s.innerHTML=`<span class="leg-sq" style="background:${COLS[i]}"></span>${c}`;
+  document.getElementById('leg1').appendChild(s);
 });
 
-new Chart(document.getElementById('c1'), {
-  type: 'line',
-  data: {
-    labels: MONTHS,
-    datasets: CATS.map((c,i) => ({
-      label: c,
-      data: caData[c],
-      borderColor: COLORS[i],
-      backgroundColor: COLORS[i] + '18',
-      tension: 0.4,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      borderWidth: 2.5,
-      fill: false
+/* ── P1 : LINE CHART ── */
+new Chart(document.getElementById('c1'),{
+  type:'line',
+  data:{
+    labels:MONTHS,
+    datasets:CATS.map((c,i)=>({
+      label:c, data:caData[c],
+      borderColor:COLS[i],
+      backgroundColor:COLS[i]+'18',
+      tension:.45, pointRadius:4, pointHoverRadius:7,
+      borderWidth:2, fill:false,
+      pointBackgroundColor:COLS[i],
+      pointBorderColor:'#ffffff',
+      pointBorderWidth:2
     }))
   },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('fr-FR')}`
-        }
-      }
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{display:false},
+      tooltip:{...TOOLTIP,callbacks:{label:c=>` ${c.dataset.label}: $${c.parsed.y.toLocaleString('fr-FR')}`}}
     },
-    scales: {
-      x: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 } } },
-      y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 }, callback: v => '$' + v.toLocaleString('fr-FR') } }
+    scales:{
+      x:{grid:{color:'rgba(60,50,40,.06)'},ticks:{font:{size:10},color:'#a89f94'}},
+      y:{grid:{color:'rgba(60,50,40,.06)'},ticks:{font:{size:10},color:'#a89f94',callback:v=>'$'+v.toLocaleString('fr-FR')}}
     }
   }
 });
 
-const cumuls = CATS.map(c => caData[c].reduce((a,b)=>a+b,0));
-new Chart(document.getElementById('c1b'), {
-  type: 'bar',
-  data: { labels: CATS, datasets: [{ label: 'CA cumulé ($)', data: cumuls, backgroundColor: COLORS, borderRadius: 6 }] },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.y.toLocaleString('fr-FR')}` } } },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-      y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 }, callback: v => '$' + v.toLocaleString('fr-FR') } }
+/* ── P1 : BAR CUMUL ── */
+const cumuls=CATS.map(c=>caData[c].reduce((a,b)=>a+b,0));
+new Chart(document.getElementById('c1b'),{
+  type:'bar',
+  data:{labels:CATS,datasets:[{
+    label:'CA cumulé',data:cumuls,
+    backgroundColor:COLS.map(c=>c+'cc'),
+    borderColor:COLS,borderWidth:1,borderRadius:4
+  }]},
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...TOOLTIP,callbacks:{label:c=>` $${c.parsed.y.toLocaleString('fr-FR')}`}}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:9},color:'#a89f94'}},
+      y:{grid:{color:'rgba(60,50,40,.06)'},ticks:{font:{size:9},color:'#a89f94',callback:v=>'$'+v.toLocaleString('fr-FR')}}
     }
   }
 });
 
-/* =========================================================
-   PANEL 2 — Top pénalités
-   ========================================================= */
-let chartTop5 = null;
-function renderTop5() {
-  const sid = parseInt(document.getElementById('storeFilter').value);
-  const d   = top5Data[sid];
+/* ── P1 : STORE LINE ── */
+new Chart(document.getElementById('c1c'),{
+  type:'line',
+  data:{
+    labels:MONTHS,
+    datasets:[
+      {label:'Magasin 1',data:[5820,9540,10230,7940,3960],borderColor:'#1a6fa8',backgroundColor:'#1a6fa812',tension:.4,pointRadius:4,borderWidth:2,pointBackgroundColor:'#1a6fa8',pointBorderColor:'#ffffff',pointBorderWidth:2},
+      {label:'Magasin 2',data:[5760,9460,10700,8050,4090],borderColor:'#6d4fb5',backgroundColor:'#6d4fb512',tension:.4,pointRadius:4,borderWidth:2,pointBackgroundColor:'#6d4fb5',pointBorderColor:'#ffffff',pointBorderWidth:2},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'top',labels:{boxWidth:10,color:'#6b6256',font:{size:10}}},
+      tooltip:{...TOOLTIP,callbacks:{label:c=>` ${c.dataset.label}: $${c.parsed.y.toLocaleString('fr-FR')}`}}
+    },
+    scales:{
+      x:{grid:{color:'rgba(60,50,40,.06)'},ticks:{font:{size:10},color:'#a89f94'}},
+      y:{grid:{color:'rgba(60,50,40,.06)'},ticks:{font:{size:9},color:'#a89f94',callback:v=>'$'+v.toLocaleString('fr-FR')}}
+    }
+  }
+});
 
-  // Tableau
-  const tbl = document.getElementById('rankTable');
-  tbl.innerHTML = `<tr>
-    <th>#</th><th>Film</th><th>Catégorie</th>
-    <th style="text-align:right">Pénalités</th>
-    <th style="text-align:center">Retard moy.</th>
-  </tr>`;
-  d.forEach((r,i) => {
-    const tr = document.createElement('tr');
-    const numClass = i === 0 ? 'rank-num top1' : 'rank-num';
-    tr.innerHTML = `
-      <td><span class="${numClass}">${i+1}</span></td>
-      <td style="font-weight:600">${r.title}</td>
-      <td><span class="badge-cat">${r.cat}</span></td>
-      <td style="text-align:right;color:#dc2626;font-weight:700">$${r.fee.toFixed(2)}</td>
-      <td style="text-align:center;color:#6b7280">${r.retard.toFixed(1)} j</td>`;
+/* ── P2 : TOP5 ── */
+let chartTop5=null;
+function renderTop5(){
+  const sid=parseInt(document.getElementById('storeFilter').value);
+  const d=top5Data[sid];
+  const tbl=document.getElementById('rankTable');
+  tbl.innerHTML=`<tr><th>#</th><th>Film</th><th>Cat.</th><th>Pénalité</th><th>Retard</th></tr>`;
+  d.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><span class="rank-num${i===0?' gold':''}">${i+1}</span></td>
+      <td><span class="film-name">${r.title}</span></td>
+      <td><span class="cat-pill">${r.cat}</span></td>
+      <td><span class="fee-val">$${r.fee.toFixed(2)}</span></td>
+      <td><span class="delay-val">${r.retard.toFixed(1)}j</span></td>`;
     tbl.appendChild(tr);
   });
-
-  // Graphique
-  if (chartTop5) chartTop5.destroy();
-  chartTop5 = new Chart(document.getElementById('c2'), {
-    type: 'bar',
-    data: {
-      labels: d.map(r => r.title.length > 18 ? r.title.substring(0,16) + '…' : r.title),
-      datasets: [{
-        label: 'Pénalités ($)',
-        data: d.map(r => r.fee),
-        backgroundColor: d.map((_,i) => i === 0 ? '#dc2626' : '#dc262680'),
-        borderRadius: 6
+  if(chartTop5)chartTop5.destroy();
+  chartTop5=new Chart(document.getElementById('c2'),{
+    type:'bar',
+    data:{
+      labels:d.map(r=>r.title.length>16?r.title.substring(0,14)+'…':r.title),
+      datasets:[{
+        label:'Pénalités ($)',data:d.map(r=>r.fee),
+        backgroundColor:d.map((_,i)=>i===0?'#c0392b':'#c0392b44'),
+        borderColor:d.map((_,i)=>i===0?'#c0392b':'#c0392b88'),
+        borderWidth:1,borderRadius:6
       }]
     },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.x.toFixed(2)}` } }
-      },
-      scales: {
-        x: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 }, callback: v => '$' + v } },
-        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{...TOOLTIP,callbacks:{label:c=>` $${c.parsed.x.toFixed(2)}`}}},
+      scales:{
+        x:{grid:{color:'rgba(60,50,40,.06)'},ticks:{font:{size:9},color:'#a89f94',callback:v=>'$'+v}},
+        y:{grid:{display:false},ticks:{font:{size:10},color:'#6b6256'}}
       }
     }
   });
 }
 renderTop5();
 
-/* =========================================================
-   PANEL 3 — Donut + Heatmap
-   ========================================================= */
-new Chart(document.getElementById('c3'), {
-  type: 'doughnut',
-  data: {
-    labels: CATS,
-    datasets: [{ data: catTotals, backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false, cutout: '62%',
-    plugins: {
-      legend: { display: false },
-      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${((ctx.parsed/totalLoc)*100).toFixed(1)}%` } }
-    }
-  }
-});
-
-const dLeg = document.getElementById('donutLegend');
-CATS.forEach((c,i) => {
-  const pct = ((catTotals[i]/totalLoc)*100).toFixed(1);
-  dLeg.innerHTML += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
-    <span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i]};flex-shrink:0"></span>
-    <span style="font-size:12px;color:#4b5563">${c}</span>
-    <span style="font-size:12px;font-weight:700;color:#111827;margin-left:auto">${pct}%</span>
-  </div>`;
-});
-
-// Progress bars (part de marché)
-const pb = document.getElementById('progBars');
-const sortedCats = CATS.map((c,i)=>({c,v:catTotals[i],col:COLORS[i]})).sort((a,b)=>b.v-a.v);
-sortedCats.forEach(({c,v,col}) => {
-  const pct = ((v/totalLoc)*100).toFixed(1);
-  pb.innerHTML += `<div class="prog-row">
-    <span class="prog-label">${c}</span>
-    <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>
-    <span class="prog-val">${pct}%</span>
-  </div>`;
-});
-
-// Heatmap
-const hmT = document.getElementById('heatmapTable');
-let headRow = '<thead><tr><th class="row-header">Pays</th>';
-hmCats.forEach(c => headRow += `<th>${c}</th>`);
-headRow += '</tr></thead>';
-hmT.innerHTML = headRow + '<tbody></tbody>';
-const tbody = hmT.querySelector('tbody');
-hmData.forEach(row => {
-  const max = Math.max(...row.vals);
-  const tr = document.createElement('tr');
-  let html = `<th class="row-header" style="font-weight:600;font-size:12px;color:#374151">${row.pays}</th>`;
-  row.vals.forEach(v => {
-    const ratio = v / 20;
-    const r = Math.round(26 + (1-ratio)*200);
-    const g = Math.round(111 + (1-ratio)*40);
-    const b = Math.round(168 + (1-ratio)*50);
-    const isMax = v === max;
-    const textColor = ratio > 0.5 ? '#ffffff' : '#1e40af';
-    const outline   = isMax ? `outline:2px solid #1a6fa8;outline-offset:1px;` : '';
-    html += `<td class="hm-cell" style="background:rgba(${r},${g},${b},${0.2+ratio*0.8});color:${textColor};${outline}" title="${row.pays} — ${hmCats[row.vals.indexOf(v)]} : ${v.toFixed(1)}%">${v.toFixed(1)}%</td>`;
-  });
-  tr.innerHTML = html;
-  tbody.appendChild(tr);
-});
-
-/* =========================================================
-   PANEL 4 — Inventaire
-   ========================================================= */
-new Chart(document.getElementById('c4'), {
-  type: 'doughnut',
-  data: {
-    labels: ['Films loués (78,5 %)', 'Films dormants (21,5 %)'],
-    datasets: [{ data: [785, 215], backgroundColor: ['#059669', '#dc2626'], borderWidth: 2, borderColor: '#fff' }]
-  },
-  options: {
-    responsive: true, maintainAspectRatio: false, cutout: '65%',
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 14 } }
-    }
-  }
-});
-
-new Chart(document.getElementById('c5'), {
-  type: 'bar',
-  data: {
-    labels: ['Travel','Music','Horror','Sci-Fi','Drama','Sports','Comedy','Family','Action'],
-    datasets: [{
-      label: 'Films dormants',
-      data: [82, 64, 47, 8, 6, 4, 3, 1, 0],
-      backgroundColor: ['#dc2626','#dc2626','#dc2626','#d97706','#d97706','#d97706','#059669','#059669','#059669'],
-      borderRadius: 6
+/* ── P2 : PÉNALITÉS PAR CAT ── */
+new Chart(document.getElementById('c2b'),{
+  type:'bar',
+  data:{
+    labels:CATS,
+    datasets:[{
+      label:'Pénalités ($)',data:penCats,
+      backgroundColor:COLS.map(c=>c+'88'),
+      borderColor:COLS,borderWidth:1,borderRadius:4
     }]
   },
-  options: {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-      y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 } } }
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...TOOLTIP}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:9},color:'#a89f94'}},
+      y:{grid:{color:'rgba(60,50,40,.06)'},ticks:{font:{size:9},color:'#a89f94',callback:v=>'$'+v}}
+    }
+  }
+});
+
+/* ── P3 : DONUT ── */
+new Chart(document.getElementById('c3'),{
+  type:'doughnut',
+  data:{labels:CATS,datasets:[{data:catTotals,backgroundColor:COLS.map(c=>c+'dd'),borderColor:'#f0ede8',borderWidth:2}]},
+  options:{
+    responsive:false,maintainAspectRatio:false,cutout:'66%',
+    plugins:{
+      legend:{display:false},
+      tooltip:{...TOOLTIP,callbacks:{label:c=>` ${c.label}: ${((c.parsed/totalLoc)*100).toFixed(1)}%`}}
+    }
+  }
+});
+const dl=document.getElementById('donutLeg');
+CATS.forEach((c,i)=>{
+  const pct=((catTotals[i]/totalLoc)*100).toFixed(1);
+  dl.innerHTML+=`<div class="dl-row"><span class="dl-sq" style="background:${COLS[i]}"></span><span class="dl-name">${c}</span><span class="dl-pct">${pct}%</span></div>`;
+});
+
+/* ── P3 : PROG BARS ── */
+const sortedIdx=catTotals.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+const pb=document.getElementById('progBars');
+pb.innerHTML='<div class="prog-list">';
+sortedIdx.forEach(({v,i})=>{
+  const pct=((v/totalLoc)*100).toFixed(1);
+  pb.innerHTML+=`<div class="prog-row">
+    <span class="prog-cat">${CATS[i]}</span>
+    <div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${COLS[i]}"></div></div>
+    <span class="prog-pct">${pct}%</span>
+  </div>`;
+});
+pb.innerHTML+='</div>';
+
+/* ── P3 : HEATMAP ── */
+const ht=document.getElementById('hmTable');
+let head=`<thead><tr><th class="rh">Pays</th>`;
+hmCats.forEach(c=>head+=`<th>${c}</th>`);
+head+=`</tr></thead><tbody>`;
+ht.innerHTML=head;
+const tbody=document.createElement('tbody');
+hmData.forEach(row=>{
+  const max=Math.max(...row.vals);
+  const tr=document.createElement('tr');
+  let html=`<th class="rh" style="font-size:11px;font-weight:600;color:#6b6256;padding:4px 6px">${row.pays}</th>`;
+  row.vals.forEach((v,ci)=>{
+    const ratio=v/20;
+    const isMax=v===max;
+    const alpha=0.08+ratio*0.65;
+    const bg = isMax
+      ? `rgba(196,125,14,${alpha+0.1})`
+      : `rgba(26,111,168,${alpha})`;
+    const textColor = ratio > 0.5
+      ? (isMax ? '#7a4800' : '#0d3d6b')
+      : (isMax ? '#a05c00' : '#1a6fa8');
+    const outline = isMax ? 'outline:1.5px solid rgba(196,125,14,.5);outline-offset:1px;' : '';
+    html+=`<td class="hm-cell" style="background:${bg};color:${textColor};${outline}" title="${row.pays} — ${hmCats[ci]}: ${v}%">${v.toFixed(1)}%</td>`;
+  });
+  tr.innerHTML=html;
+  tbody.appendChild(tr);
+});
+ht.appendChild(tbody);
+
+/* ── P3 : SEGMENTATION ── */
+new Chart(document.getElementById('c3b'),{
+  type:'bar',
+  data:{
+    labels:segData.labels,
+    datasets:[{
+      label:'Clients',data:segData.data,
+      backgroundColor:['#1a6fa8bb','#1e8a5ebb','#6d4fb5bb','#a89f94bb'],
+      borderColor:    ['#1a6fa8','#1e8a5e','#6d4fb5','#a89f94'],
+      borderWidth:1,borderRadius:6
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...TOOLTIP}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:10},color:'#a89f94'}},
+      y:{grid:{color:'rgba(60,50,40,.06)'},ticks:{font:{size:9},color:'#a89f94'}}
+    }
+  }
+});
+
+/* ── P4 : MINI RING ── */
+new Chart(document.getElementById('c4mini'),{
+  type:'doughnut',
+  data:{labels:['Loués','Dormants'],datasets:[{data:[785,215],backgroundColor:['#1e8a5e99','#c0392b55'],borderColor:['#1e8a5e','#c0392b'],borderWidth:1.5}]},
+  options:{
+    responsive:false,maintainAspectRatio:false,cutout:'72%',
+    plugins:{legend:{display:false},tooltip:{enabled:false}}
+  }
+});
+
+new Chart(document.getElementById('c5'),{
+  type:'bar',
+  data:{
+    labels:['Travel','Music','Horror','Sci-Fi','Drama','Sports','Comedy','Family','Action'],
+    datasets:[{
+      label:'Films dormants',
+      data:[82,64,47,8,6,4,3,1,0],
+      backgroundColor:['#c0392baa','#c0392b88','#c0392b66','#c47d0e88','#c47d0e66','#c47d0e44','#1e8a5e66','#1e8a5e44','#1e8a5e22'],
+      borderColor:    ['#c0392b','#c0392b','#c0392b','#c47d0e','#c47d0e','#c47d0e','#1e8a5e','#1e8a5e','#1e8a5e'],
+      borderWidth:1,borderRadius:6
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...TOOLTIP}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:10},color:'#a89f94'}},
+      y:{grid:{color:'rgba(60,50,40,.06)'},ticks:{font:{size:9},color:'#a89f94'}}
     }
   }
 });
 </script>
-
 </body>
 </html>
