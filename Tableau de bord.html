@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sakila 360 — Dashboard Analytique</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #f5f7fa;
+    --surface:  #ffffff;
+    --surface2: #f0f3f8;
+    --border:   #dde3ed;
+    --text1:    #111827;
+    --text2:    #4b5563;
+    --text3:    #9ca3af;
+    --blue:     #1a6fa8;
+    --blue-lt:  #dbeafe;
+    --blue-dk:  #1e40af;
+    --green:    #059669;
+    --green-lt: #d1fae5;
+    --red:      #dc2626;
+    --red-lt:   #fee2e2;
+    --amber:    #d97706;
+    --amber-lt: #fef3c7;
+    --gold:     #c9a84c;
+    --radius:   10px;
+    --radius-sm:6px;
+    --shadow:   0 1px 4px rgba(0,0,0,.08), 0 0 0 0.5px rgba(0,0,0,.06);
+  }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text1);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text1); }
+  .logo span { color: var(--blue); }
+  .header-meta { display: flex; align-items: center; gap: 12px; }
+  .badge {
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 20px; background: var(--blue-lt); color: var(--blue-dk);
+    letter-spacing: 0.3px;
+  }
+  .badge.green { background: var(--green-lt); color: var(--green); }
+  .header-meta p { font-size: 12px; color: var(--text3); }
+
+  /* ===== LAYOUT ===== */
+  .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+  /* ===== KPI GRID ===== */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 1.5rem;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.1rem 1.25rem;
+    border-left: 4px solid var(--blue);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .kpi-card.green { border-left-color: var(--green); }
+  .kpi-card.red   { border-left-color: var(--red); }
+  .kpi-card.amber { border-left-color: var(--amber); }
+  .kpi-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; }
+  .kpi-value { font-size: 26px; font-weight: 700; color: var(--text1); line-height: 1.2; }
+  .kpi-delta { font-size: 11px; color: var(--text2); }
+  .kpi-delta.up   { color: var(--green); }
+  .kpi-delta.down { color: var(--red); }
+
+  /* ===== TABS ===== */
+  .tabs-wrapper {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .tabs-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    padding: 0 1.25rem;
+    gap: 2px;
+  }
+  .tab-btn {
+    font-size: 13px; font-weight: 500;
+    padding: 12px 18px;
+    border: none; background: transparent;
+    color: var(--text2); cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn:hover { color: var(--text1); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab-icon { font-size: 15px; }
+
+  /* ===== PANELS ===== */
+  .panel { display: none; padding: 1.5rem; }
+  .panel.active { display: block; }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.25rem;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 600; color: var(--text1);
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--blue);
+  }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+  .one-col { margin-bottom: 1.25rem; }
+
+  /* ===== LEGEND ===== */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 12px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text2);
+  }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0;
+  }
+
+  /* ===== FILTER BAR ===== */
+  .filter-bar {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .filter-bar label { font-size: 12px; font-weight: 600; color: var(--text2); }
+  .filter-bar select {
+    font-size: 12px; padding: 5px 10px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--text1); cursor: pointer;
+  }
+
+  /* ===== RANK TABLE ===== */
+  .rank-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .rank-table th {
+    text-align: left; padding: 8px 10px;
+    border-bottom: 2px solid var(--border);
+    color: var(--text3); font-weight: 600;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .rank-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text1); vertical-align: middle;
+  }
+  .rank-table tr:last-child td { border-bottom: none; }
+  .rank-table tr:hover td { background: var(--surface2); }
+  .rank-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--blue-lt); color: var(--blue-dk);
+    font-weight: 700; font-size: 11px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .rank-num.top1 { background: #fef9c3; color: #92400e; }
+  .badge-cat {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    background: var(--surface2); color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  /* ===== HEATMAP ===== */
+  .heatmap-wrap { overflow-x: auto; }
+  .heatmap-table { border-collapse: separate; border-spacing: 3px; }
+  .heatmap-table th {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    padding: 4px 10px; text-align: center; white-space: nowrap;
+  }
+  .heatmap-table th.row-header { text-align: left; min-width: 90px; }
+  .hm-cell {
+    width: 90px; height: 38px;
+    border-radius: 6px;
+    text-align: center; font-size: 12px; font-weight: 700;
+    cursor: default; transition: transform .15s;
+    padding: 0 4px;
+  }
+  .hm-cell:hover { transform: scale(1.06); z-index: 1; position: relative; }
+
+  /* ===== STORE CARDS ===== */
+  .store-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.25rem; }
+  .store-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.1rem 1.25rem;
+    border-top: 3px solid var(--blue);
+  }
+  .store-name { font-size: 13px; font-weight: 700; color: var(--text1); margin-bottom: 4px; }
+  .store-sub  { font-size: 11px; color: var(--text3); margin-bottom: 12px; }
+  .store-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-item { }
+  .stat-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.4px; }
+  .stat-val { font-size: 16px; font-weight: 700; color: var(--text1); }
+  .stat-val.danger { color: var(--red); }
+
+  /* ===== PROGRESS BAR ===== */
+  .prog-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .prog-label { font-size: 12px; color: var(--text2); width: 80px; flex-shrink: 0; }
+  .prog-bar { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+  .prog-val { font-size: 11px; color: var(--text2); width: 50px; text-align: right; flex-shrink: 0; }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    text-align: center; padding: 1.5rem;
+    font-size: 11px; color: var(--text3);
+    border-top: 1px solid var(--border); margin-top: 1rem;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .two-col, .store-grid { grid-template-columns: 1fr; }
+    .container { padding: 1rem; }
+    .header { padding: 0 1rem; }
+    .tabs-bar { overflow-x: auto; }
+  }
+  @media (max-width: 540px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .kpi-value { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">Sakila <span>360</span></div>
+  <div class="header-meta">
+    <span class="badge green">● Live DWH</span>
+    <span class="badge">2005 · Période analysée</span>
+    <p>Base : sakila_dwh</p>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">💰 Chiffre d'affaires</div>
+      <div class="kpi-value">$67 416</div>
+      <div class="kpi-delta up">▲ +18 % vs période préc.</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">🎬 Locations totales</div>
+      <div class="kpi-value">16 049</div>
+      <div class="kpi-delta up">▲ +12 % en 2005</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">⚠️ Pénalités de retard</div>
+      <div class="kpi-value">$8 132</div>
+      <div class="kpi-delta down">12,1 % du CA total</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-label">📦 Taux d'occupation</div>
+      <div class="kpi-value">78,5 %</div>
+      <div class="kpi-delta">215 films dormants</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-wrapper">
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="showTab('t1',this)">
+        <span class="tab-icon"></span> CA mensuel par catégorie
+      </button>
+      <button class="tab-btn" onclick="showTab('t2',this)">
+        <span class="tab-icon"> </span> Top pénalités par film
+      </button>
+      <button class="tab-btn" onclick="showTab('t3',this)">
+        <span class="tab-icon"> </span> Profil client × pays
+      </button>
+      <button class="tab-btn" onclick="showTab('t4',this)">
+        <span class="tab-icon"></span> Occupation inventaire
+      </button>
+    </div>
+
+    <!-- PANEL 1 : CA mensuel -->
+    <div id="t1" class="panel active">
+      <div class="one-col card">
+        <div class="card-title"><span class="dot"></span>Évolution mensuelle du CA par catégorie de film (2005)</div>
+        <div class="legend" id="leg1"></div>
+        <div style="position:relative;width:100%;height:320px">
+          <canvas id="c1" role="img" aria-label="Courbes du chiffre d'affaires mensuel par catégorie 2005">CA mensuel par catégorie de film.</canvas>
+        </div>
+      </div>
+      <div class="one-col card">
+        <div class="card-title"><span class="dot" style="background:var(--amber)"></span>Cumul CA par catégorie (mai–sept. 2005)</div>
+        <div style="position:relative;width:100%;height:240px">
+          <canvas id="c1b" role="img" aria-label="Barres du CA cumulé par catégorie 2005">CA cumulé par catégorie.</canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 2 : Top pénalités -->
+    <div id="t2" class="panel">
+      <div class="filter-bar">
+        <label>🏪 Filtrer par magasin :</label>
+        <select id="storeFilter" onchange="renderTop5()">
+          <option value="1">Magasin 1 — Lethbridge (CA)</option>
+          <option value="2">Magasin 2 — Woodridge (AU)</option>
+        </select>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--red)"></span>Top 5 films — pénalités ($)</div>
+          <div style="position:relative;width:100%;height:260px">
+            <canvas id="c2" role="img" aria-label="Top 5 films avec le plus de pénalités">Top films par pénalités.</canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Classement détaillé</div>
+          <table class="rank-table" id="rankTable"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 3 : Pays × genre -->
+    <div id="t3" class="panel">
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>Répartition des locations par catégorie</div>
+          <div style="position:relative;height:260px">
+            <canvas id="c3" role="img" aria-label="Donut des locations par catégorie">Répartition par catégorie.</canvas>
+          </div>
+          <div id="donutLegend" style="margin-top:12px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--green)"></span>Top catégories — part de marché (%)</div>
+          <div id="progBars" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="one-col card">
+        <div class="card-title"><span class="dot" style="background:var(--amber)"></span>Heatmap : genre préféré par pays (%)</div>
+        <p style="font-size:11px;color:var(--text3);margin-bottom:12px">Pourcentage des locations du pays consacrées à chaque catégorie. Les cases surlignées = genre #1 pour ce pays.</p>
+        <div class="heatmap-wrap">
+          <table class="heatmap-table" id="heatmapTable"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 4 : Inventaire -->
+    <div id="t4" class="panel">
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--green)"></span>Taux d'occupation de l'inventaire</div>
+          <div style="position:relative;height:240px">
+            <canvas id="c4" role="img" aria-label="Donut du taux d'occupation inventaire">785 films loués, 215 dormants sur 1000 total.</canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot" style="background:var(--red)"></span>Films dormants par catégorie</div>
+          <div style="position:relative;height:240px">
+            <canvas id="c5" role="img" aria-label="Barres des films jamais loués par catégorie">Films dormants par catégorie.</canvas>
+          </div>
+        </div>
+      </div>
+      <div class="store-grid">
+        <div class="store-card">
+          <div class="store-name"> Magasin 1 — Lethbridge, Canada</div>
+          <div class="store-sub">Manager : Mike Hillyer · Store ID : 1</div>
+          <div class="store-stats">
+            <div class="stat-item"><div class="stat-lbl">Locations</div><div class="stat-val">7 918</div></div>
+            <div class="stat-item"><div class="stat-lbl">CA</div><div class="stat-val">$33 490</div></div>
+            <div class="stat-item"><div class="stat-lbl">Pénalités</div><div class="stat-val danger">$4 021</div></div>
+            <div class="stat-item"><div class="stat-lbl">Films actifs</div><div class="stat-val">392</div></div>
+          </div>
+        </div>
+        <div class="store-card">
+          <div class="store-name"> Magasin 2 — Woodridge, Australie</div>
+          <div class="store-sub">Manager : Jon Stephens · Store ID : 2</div>
+          <div class="store-stats">
+            <div class="stat-item"><div class="stat-lbl">Locations</div><div class="stat-val">8 131</div></div>
+            <div class="stat-item"><div class="stat-lbl">CA</div><div class="stat-val">$33 926</div></div>
+            <div class="stat-item"><div class="stat-lbl">Pénalités</div><div class="stat-val danger">$4 111</div></div>
+            <div class="stat-item"><div class="stat-lbl">Films actifs</div><div class="stat-val">398</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  Sakila 360 — Data Warehouse · MySQL 8.0 · Chart.js 4.4 · © 2024  ASSA · ALATSA · AZONFACK
+</footer>
+
+<script>
+/* =========================================================
+   DONNÉES (à remplacer par appels API/PHP si connexion BDD)
+   ========================================================= */
+const MONTHS  = ['Mai','Juin','Juil.','Août','Sept.'];
+const CATS    = ['Sports','Sci-Fi','Animation','Action','Comedy','Drama','Family','Horror','Music'];
+const COLORS  = ['#1a6fa8','#e05c2a','#2a9d6f','#8b5cf6','#d97706','#dc2626','#0891b2','#be185d','#6b7280'];
+
+const caData = {
+  Sports:    [3210,4892,5103,3820,2180],
+  'Sci-Fi':  [2980,4756,4890,3650,2020],
+  Animation: [2740,4200,5103,3900,1980],
+  Action:    [2650,3980,4621,3540,1870],
+  Comedy:    [2510,3720,4210,3280,1740],
+  Drama:     [2390,3610,3980,3100,1650],
+  Family:    [2100,3200,3540,2800,1450],
+  Horror:    [1890,2950,3210,2540,1320],
+  Music:     [1650,2640,2980,2310,1180]
+};
+
+const top5Data = {
+  1:[
+    {title:'HURRICANE AFFAIR', cat:'Drama',   fee:87.42, nb:23, retard:3.8},
+    {title:'PATIENT SISTER',   cat:'Comedy',  fee:76.15, nb:18, retard:4.2},
+    {title:'FRONTIER CABIN',   cat:'Western', fee:71.90, nb:20, retard:3.6},
+    {title:'DANCES NONE',      cat:'Music',   fee:68.30, nb:15, retard:4.5},
+    {title:'ROCKY WAR',        cat:'Action',  fee:62.75, nb:17, retard:3.7}
+  ],
+  2:[
+    {title:'AFFAIR PREJUDICE', cat:'Drama',       fee:91.10, nb:25, retard:4.1},
+    {title:'ADAPTATION HOLES', cat:'Documentary', fee:79.40, nb:22, retard:3.9},
+    {title:'ALABAMA DEVIL',    cat:'Horror',      fee:74.20, nb:19, retard:4.0},
+    {title:'BETRAYED REAR',    cat:'Comedy',      fee:66.80, nb:16, retard:3.5},
+    {title:'CABIN FLASH',      cat:'Action',      fee:61.50, nb:18, retard:3.8}
+  ]
+};
+
+const catTotals = [4200,3980,3820,3540,3280,3100,2800,2540,2310];
+const totalLoc  = catTotals.reduce((a,b)=>a+b,0);
+
+const hmData = [
+  {pays:'India',   vals:[2.1, 14.8, 3.4,  8.2,  5.0]},
+  {pays:'China',   vals:[6.0,  4.1, 16.2, 12.3,  3.2]},
+  {pays:'USA',     vals:[13.1, 5.2,  7.0,  4.4,  8.1]},
+  {pays:'Brazil',  vals:[4.3,  6.1,  5.5, 15.5,  7.2]},
+  {pays:'Japan',   vals:[17.3, 3.0, 12.0,  4.1,  6.8]},
+  {pays:'Mexico',  vals:[6.1,  8.3,  5.2, 11.2,  4.0]},
+  {pays:'Germany', vals:[9.2,  7.1,  6.3,  5.8, 13.5]},
+  {pays:'France',  vals:[5.4,  9.8,  7.2,  6.3, 12.1]},
+];
+const hmCats = ['Sci-Fi','Drama','Animation','Comedy','Sports'];
+
+/* =========================================================
+   ONGLETS
+   ========================================================= */
+function showTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* =========================================================
+   PANEL 1 — Courbes CA mensuel
+   ========================================================= */
+const legEl = document.getElementById('leg1');
+CATS.forEach((c,i) => {
+  const span = document.createElement('span');
+  span.className = 'legend-item';
+  span.innerHTML = `<span class="legend-dot" style="background:${COLORS[i]}"></span>${c}`;
+  legEl.appendChild(span);
+});
+
+new Chart(document.getElementById('c1'), {
+  type: 'line',
+  data: {
+    labels: MONTHS,
+    datasets: CATS.map((c,i) => ({
+      label: c,
+      data: caData[c],
+      borderColor: COLORS[i],
+      backgroundColor: COLORS[i] + '18',
+      tension: 0.4,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      borderWidth: 2.5,
+      fill: false
+    }))
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('fr-FR')}`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 } } },
+      y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 }, callback: v => '$' + v.toLocaleString('fr-FR') } }
+    }
+  }
+});
+
+const cumuls = CATS.map(c => caData[c].reduce((a,b)=>a+b,0));
+new Chart(document.getElementById('c1b'), {
+  type: 'bar',
+  data: { labels: CATS, datasets: [{ label: 'CA cumulé ($)', data: cumuls, backgroundColor: COLORS, borderRadius: 6 }] },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.y.toLocaleString('fr-FR')}` } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 }, callback: v => '$' + v.toLocaleString('fr-FR') } }
+    }
+  }
+});
+
+/* =========================================================
+   PANEL 2 — Top pénalités
+   ========================================================= */
+let chartTop5 = null;
+function renderTop5() {
+  const sid = parseInt(document.getElementById('storeFilter').value);
+  const d   = top5Data[sid];
+
+  // Tableau
+  const tbl = document.getElementById('rankTable');
+  tbl.innerHTML = `<tr>
+    <th>#</th><th>Film</th><th>Catégorie</th>
+    <th style="text-align:right">Pénalités</th>
+    <th style="text-align:center">Retard moy.</th>
+  </tr>`;
+  d.forEach((r,i) => {
+    const tr = document.createElement('tr');
+    const numClass = i === 0 ? 'rank-num top1' : 'rank-num';
+    tr.innerHTML = `
+      <td><span class="${numClass}">${i+1}</span></td>
+      <td style="font-weight:600">${r.title}</td>
+      <td><span class="badge-cat">${r.cat}</span></td>
+      <td style="text-align:right;color:#dc2626;font-weight:700">$${r.fee.toFixed(2)}</td>
+      <td style="text-align:center;color:#6b7280">${r.retard.toFixed(1)} j</td>`;
+    tbl.appendChild(tr);
+  });
+
+  // Graphique
+  if (chartTop5) chartTop5.destroy();
+  chartTop5 = new Chart(document.getElementById('c2'), {
+    type: 'bar',
+    data: {
+      labels: d.map(r => r.title.length > 18 ? r.title.substring(0,16) + '…' : r.title),
+      datasets: [{
+        label: 'Pénalités ($)',
+        data: d.map(r => r.fee),
+        backgroundColor: d.map((_,i) => i === 0 ? '#dc2626' : '#dc262680'),
+        borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.x.toFixed(2)}` } }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 }, callback: v => '$' + v } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+renderTop5();
+
+/* =========================================================
+   PANEL 3 — Donut + Heatmap
+   ========================================================= */
+new Chart(document.getElementById('c3'), {
+  type: 'doughnut',
+  data: {
+    labels: CATS,
+    datasets: [{ data: catTotals, backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '62%',
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${((ctx.parsed/totalLoc)*100).toFixed(1)}%` } }
+    }
+  }
+});
+
+const dLeg = document.getElementById('donutLegend');
+CATS.forEach((c,i) => {
+  const pct = ((catTotals[i]/totalLoc)*100).toFixed(1);
+  dLeg.innerHTML += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+    <span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i]};flex-shrink:0"></span>
+    <span style="font-size:12px;color:#4b5563">${c}</span>
+    <span style="font-size:12px;font-weight:700;color:#111827;margin-left:auto">${pct}%</span>
+  </div>`;
+});
+
+// Progress bars (part de marché)
+const pb = document.getElementById('progBars');
+const sortedCats = CATS.map((c,i)=>({c,v:catTotals[i],col:COLORS[i]})).sort((a,b)=>b.v-a.v);
+sortedCats.forEach(({c,v,col}) => {
+  const pct = ((v/totalLoc)*100).toFixed(1);
+  pb.innerHTML += `<div class="prog-row">
+    <span class="prog-label">${c}</span>
+    <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>
+    <span class="prog-val">${pct}%</span>
+  </div>`;
+});
+
+// Heatmap
+const hmT = document.getElementById('heatmapTable');
+let headRow = '<thead><tr><th class="row-header">Pays</th>';
+hmCats.forEach(c => headRow += `<th>${c}</th>`);
+headRow += '</tr></thead>';
+hmT.innerHTML = headRow + '<tbody></tbody>';
+const tbody = hmT.querySelector('tbody');
+hmData.forEach(row => {
+  const max = Math.max(...row.vals);
+  const tr = document.createElement('tr');
+  let html = `<th class="row-header" style="font-weight:600;font-size:12px;color:#374151">${row.pays}</th>`;
+  row.vals.forEach(v => {
+    const ratio = v / 20;
+    const r = Math.round(26 + (1-ratio)*200);
+    const g = Math.round(111 + (1-ratio)*40);
+    const b = Math.round(168 + (1-ratio)*50);
+    const isMax = v === max;
+    const textColor = ratio > 0.5 ? '#ffffff' : '#1e40af';
+    const outline   = isMax ? `outline:2px solid #1a6fa8;outline-offset:1px;` : '';
+    html += `<td class="hm-cell" style="background:rgba(${r},${g},${b},${0.2+ratio*0.8});color:${textColor};${outline}" title="${row.pays} — ${hmCats[row.vals.indexOf(v)]} : ${v.toFixed(1)}%">${v.toFixed(1)}%</td>`;
+  });
+  tr.innerHTML = html;
+  tbody.appendChild(tr);
+});
+
+/* =========================================================
+   PANEL 4 — Inventaire
+   ========================================================= */
+new Chart(document.getElementById('c4'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Films loués (78,5 %)', 'Films dormants (21,5 %)'],
+    datasets: [{ data: [785, 215], backgroundColor: ['#059669', '#dc2626'], borderWidth: 2, borderColor: '#fff' }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '65%',
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 14 } }
+    }
+  }
+});
+
+new Chart(document.getElementById('c5'), {
+  type: 'bar',
+  data: {
+    labels: ['Travel','Music','Horror','Sci-Fi','Drama','Sports','Comedy','Family','Action'],
+    datasets: [{
+      label: 'Films dormants',
+      data: [82, 64, 47, 8, 6, 4, 3, 1, 0],
+      backgroundColor: ['#dc2626','#dc2626','#dc2626','#d97706','#d97706','#d97706','#059669','#059669','#059669'],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: { grid: { color: 'rgba(0,0,0,.05)' }, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+</script>
+
+</body>
+</html>
