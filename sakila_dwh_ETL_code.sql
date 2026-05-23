@@ -572,7 +572,7 @@ FROM films_loues_trim fl;
 -- Utilise la vue v_ca_mensuel_categorie déjà construite avec
 -- window functions (part de marché + CA mobile 3 mois).
 -- ============================================================
-/*
+
 SELECT
     year,
     month_num,
@@ -585,13 +585,13 @@ SELECT
 FROM   dwh.v_ca_mensuel_categorie
 WHERE  year = 2005
 ORDER  BY month_num, ca_mensuel DESC;
-*/
+
 
 -- ============================================================
 -- Q2 — Top 5 films avec le plus de pénalités par magasin
 --      (RANK() OVER PARTITION BY store)
 -- ============================================================
-/*
+
 SELECT
     store_id,
     ville_magasin,
@@ -622,13 +622,13 @@ FROM (
 ) ranked
 WHERE  rang_par_magasin <= 5
 ORDER  BY store_id, rang_par_magasin;
-*/
+
 
 -- ============================================================
 -- Q3 — Corrélation pays-client / genre de film
 --      (part du genre dans les locations du pays)
 -- ============================================================
-/*
+
 SELECT
     dc.country,
     df.category,
@@ -646,13 +646,13 @@ JOIN   dwh.dim_customer dc  ON fr.customer_key = dc.customer_key
 JOIN   dwh.dim_film     df  ON fr.film_key     = df.film_key
 GROUP  BY dc.country, df.category
 ORDER  BY dc.country, nb_locations DESC;
-*/
+
 
 -- ============================================================
 -- Q4 — Taux d'occupation du dernier trimestre
 --      (films jamais loués vs inventaire total)
 -- ============================================================
-/*
+
 SELECT * FROM dwh.v_occupation_inventaire;
 
 -- Détail par catégorie :
@@ -684,7 +684,7 @@ LEFT JOIN films_loues fl ON df.film_key = fl.film_key
 WHERE  df.is_current
 GROUP  BY df.category
 ORDER  BY pct_dormance DESC;
-*/
+
 
 -- ---------------------------------------------------------------
 -- 7. EXÉCUTION DE L'ETL
@@ -693,7 +693,7 @@ ORDER  BY pct_dormance DESC;
 -- CALL dwh.sp_load_all();
 
 -- Vérification rapide post-ETL :
-/*
+
 SELECT
     'dim_date'     AS table_name, COUNT(*) AS nb_lignes FROM dwh.dim_date     UNION ALL
 SELECT 'dim_film',                          COUNT(*)    FROM dwh.dim_film     UNION ALL
@@ -701,7 +701,7 @@ SELECT 'dim_customer',                      COUNT(*)    FROM dwh.dim_customer UN
 SELECT 'dim_store',                         COUNT(*)    FROM dwh.dim_store    UNION ALL
 SELECT 'fact_rental',                       COUNT(*)    FROM dwh.fact_rental
 ORDER  BY table_name;
-*/
+
 
 -- ---------------------------------------------------------------
 -- FIN DU SCRIPT
